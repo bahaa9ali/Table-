@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جدول الدوام الشهري</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+    --خفارة: #ffd8b1;
+    --استراحة: #fff9c2;
+    --صباحي: #c8e6c9;
+    --مسائي: #bbdefb;
+    --عطلة: #f8b6b6;
+    --اجازة: #d1c4e9;
+    --primary: #3498db;
+    --dark: #2c3e50;
+    --light: #ecf0f1;
+}
+* { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { margin: 0; padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; color: #333; }
+.container { max-width: 1200px; margin: 20px auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);}
+.header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--light); padding-bottom: 15px; }
+h1 { margin-bottom: 10px; font-size: 2rem; color: var(--dark);}
+.controls { display:flex; justify-content:center; align-items:center; margin-bottom:20px; gap:15px; flex-wrap:wrap; }
+select, button { padding: 10px 15px; border:2px solid #ddd; border-radius:8px; font-size:15px; transition: all 0.3s; }
+button { background-color: var(--primary); color:white; display:flex; gap:6px; cursor:pointer; }
+button:hover { background-color: #2980b9; }
+.legend { display:flex; justify-content:center; flex-wrap:wrap; gap:15px; margin-bottom:25px; }
+.legend-item { display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:6px; font-weight:500;}
+.legend-color { width:18px; height:18px; border-radius:4px; }
+.calendar { display:grid; grid-template-columns: repeat(7,1fr); gap:8px; }
+.day-cell { border:1px solid #ddd; border-radius:10px; padding:8px; min-height:120px; display:flex; flex-direction:column; justify-content:flex-start; position:relative; background:#fff; transition:all 0.3s; }
+.day-cell.today { border:2px solid #e74c3c; }
+.day-header { font-weight:bold; margin-bottom:6px; }
+.shift-select { margin-top:auto; padding:6px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+.note { font-size:12px; color:#555; margin-top:4px; }
+.holiday { background-color: var(--عطلة) !important; }
+.leave { background-color: var(--اجازة) !important; }
+.btn-small { margin-top:5px; font-size:12px; padding:4px 6px; border-radius:5px; background:#95a5a6; color:white; cursor:pointer; border:none; }
+@media (max-width:768px){ .calendar { grid-template-columns: repeat(2,1fr); } }
+
+/* --- طباعة --- */
+@media print {
+    body { background:#fff; }
+    .controls, .legend, #print-btn { display:none; }
+    .calendar { display: block; }
+    .day-cell { display: table-row; border:none; min-height:auto; margin:0; padding:5px; }
+    .day-header { display: table-cell; font-weight:bold; padding:5px; width:20%; }
+    .shift-select, .note, .btn-small { display: table-cell; padding:5px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>جدول الدوام الشهري</h1></div>
+    <div class="controls">
+        <select id="year-select"></select>
+        <select id="month-select">
+            <option value="0">يناير</option>
+            <option value="1">فبراير</option>
+            <option value="2">مارس</option>
+            <option value="3">أبريل</option>
+            <option value="4">مايو</option>
+            <option value="5">يونيو</option>
+            <option value="6">يوليو</option>
+            <option value="7">أغسطس</option>
+            <option value="8">سبتمبر</option>
+            <option value="9">أكتوبر</option>
+            <option value="10">نوفمبر</option>
+            <option value="11">ديسمبر</option>
+        </select>
+        <button id="generate-btn"><i class="fas fa-sync-alt"></i> إنشاء الجدول</button>
+        <button id="print-btn"><i class="fas fa-print"></i> طباعة / PDF</button>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:var(--خفارة)"></div> خفارة</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--استراحة)"></div> استراحة</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--صباحي)"></div> صباحي</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--مسائي)"></div> مسائي</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--عطلة)"></div> عطلة رسمية</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--اجازة)"></div> إجازة</div>
+    </div>
+    <div id="calendar" class="calendar"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const yearSelect = document.getElementById('year-select');
+    const monthSelect = document.getElementById('month-select');
+    const generateBtn = document.getElementById('generate-btn');
+    const calendar = document.getElementById('calendar');
+    const printBtn = document.getElementById('print-btn');
+
+    const holidays = { "1-1":"رأس السنة", "9-1":"عاشوراء", "14-7":"ثورة 14 تموز", "3-10":"العيد الوطني" };
+    const currentYear = new Date().getFullYear();
+    for(let y=currentYear-1;y<=currentYear+2;y++){ const opt=document.createElement('option'); opt.value=y; opt.textContent=y; if(y===currentYear) opt.selected=true; yearSelect.appendChild(opt);}
+    monthSelect.value = new Date().getMonth();
+    generateSchedule();
+    generateBtn.addEventListener('click', generateSchedule);
+    printBtn.addEventListener('click',()=>window.print());
+
+    function generateSchedule(){
+        calendar.innerHTML="";
+        const year=parseInt(yearSelect.value);
+        const month=parseInt(monthSelect.value);
+        const daysInMonth=new Date(year,month+1,0).getDate();
+        const daysOfWeek=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+        for(let day=1;day<=daysInMonth;day++){
+            const date=new Date(year,month,day);
+            const dayOfWeek=daysOfWeek[date.getDay()];
+            const cell=document.createElement('div'); cell.className="day-cell";
+            const today=new Date();
+            if(day===today.getDate()&&month===today.getMonth()&&year===today.getFullYear()) cell.classList.add("today");
+            const header=document.createElement('div'); header.className="day-header"; header.textContent=`${dayOfWeek} ${day}/${month+1}`; cell.appendChild(header);
+            const select=document.createElement('select'); select.className="shift-select";
+            const options=[{value:'',text:'اختر الدوام'},{value:'خفارة',text:'خفارة'},{value:'استراحة',text:'استراحة'},{value:'صباحي',text:'صباحي'},{value:'مسائي',text:'مسائي'}];
+            options.forEach(opt=>{ const o=document.createElement('option'); o.value=opt.value; o.textContent=opt.text; select.appendChild(o);});
+            const key=`${year}-${month+1}-${day}`;
+            const saved=localStorage.getItem(key); if(saved){ select.value=saved; applyShift(cell,saved);}
+            select.addEventListener('change',function(){ localStorage.setItem(key,this.value); applyShift(cell,this.value); });
+            cell.appendChild(select);
+
+            const leaveBtn=document.createElement('button'); leaveBtn.className="btn-small"; leaveBtn.textContent="إجازة";
+            leaveBtn.addEventListener('click',function(){ cell.classList.toggle("leave"); if(cell.classList.contains("leave")) localStorage.setItem(key+"-leave","1"); else localStorage.removeItem(key+"-leave"); });
+            cell.appendChild(leaveBtn);
+
+            const note=document.createElement('div'); note.className="note"; const savedNote=localStorage.getItem(key+"-note")||""; note.textContent=savedNote; cell.appendChild(note);
+            const noteBtn=document.createElement('button'); noteBtn.className="btn-small"; noteBtn.textContent="ملاحظة";
+            noteBtn.addEventListener('click',function(){ const newNote=prompt("اكتب الملاحظة:",savedNote); if(newNote!==null){ note.textContent=newNote; localStorage.setItem(key+"-note",newNote); }});
+            cell.appendChild(noteBtn);
+
+            const holidayKey=`${day}-${month+1}`;
+            if(holidays[holidayKey]){ cell.classList.add("holiday"); const h=document.createElement('div'); h.className="note"; h.textContent=`عطلة: ${holidays[holidayKey]}`; cell.appendChild(h);}
+            if(localStorage.getItem(key+"-leave")) cell.classList.add("leave");
+            calendar.appendChild(cell);
+        }
+    }
+
+    function applyShift(cell,value){ cell.style.backgroundColor=""; if(value){ const color=getComputedStyle(document.documentElement).getPropertyValue(`--${value}`); cell.style.backgroundColor=color; } }
+});
+</script>
+</body>
+</html>
