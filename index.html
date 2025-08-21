@@ -67,18 +67,34 @@ button.success:hover { background-color: #219653; }
 }
 
 /* --- جدول الطباعة --- */
-#print-table { display:none; width:100%; border-collapse:collapse; margin-top:20px; font-size: 14px; }
-#print-table th, #print-table td { border:1px solid #000; padding:8px; text-align:center; }
-#print-table th { background:#eee; font-weight: 700; }
-.print-shift { font-weight: 600; }
+.print-container { display: none; }
+.print-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 16px; border: 2px solid #000; }
+.print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: center; }
+.print-table th { background: #ddd; font-weight: 700; font-size: 18px; }
+.print-header { text-align: center; margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+.print-header h2 { margin: 0; font-size: 24px; color: #2c3e50; }
+.print-header p { margin: 5px 0; font-size: 18px; }
+.print-shift { font-weight: 600; padding: 5px 10px; border-radius: 4px; }
+
+/* ألوان جدول الطباعة */
+.print-morning { background-color: var(--صباحي); }
+.print-evening { background-color: var(--مسائي); }
+.print-guard { background-color: var(--خفارة); }
+.print-rest { background-color: var(--استراحة); }
+.print-holiday { background-color: var(--عطلة); }
+.print-leave { background-color: var(--اجازة); }
+
 @media print {
-    body { background:#fff; padding: 0; margin: 0; }
-    .container { box-shadow: none; padding: 10px; margin: 0; max-width: 100%; }
-    .controls, .legend, .actions, #calendar { display:none; }
-    #print-table { display:table; }
-    .print-header { text-align: center; margin-bottom: 20px; }
-    .print-header h2 { margin: 0; font-size: 24px; }
-    .print-header p { margin: 5px 0; }
+    body { background: #fff; padding: 0; margin: 0; }
+    .container { box-shadow: none; padding: 0; margin: 0; max-width: 100%; }
+    .controls, .legend, .actions, #calendar, .header { display: none; }
+    .print-container { display: block; }
+    .print-table { width: 100%; }
+    
+    /* ضبط حجم الخط للطباعة */
+    .print-table th, .print-table td { font-size: 16px; }
+    .print-header h2 { font-size: 28px; }
+    .print-header p { font-size: 20px; }
 }
 </style>
 </head>
@@ -125,22 +141,24 @@ button.success:hover { background-color: #219653; }
     
     <div id="calendar" class="calendar"></div>
 
-    <!-- جدول الطباعة -->
-    <div class="print-header">
-        <h2>جدول الدوام الشهري</h2>
-        <p id="print-date-range"></p>
+    <!-- طباعة الجدول -->
+    <div class="print-container">
+        <div class="print-header">
+            <h2>جدول الدوام الشهري</h2>
+            <p id="print-date-range"></p>
+        </div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>الملامسيات</th>
+                    <th>اليوم</th>
+                    <th>التاريخ</th>
+                    <th>الدوام</th>
+                </tr>
+            </thead>
+            <tbody id="print-body"></tbody>
+        </table>
     </div>
-    <table id="print-table">
-        <thead>
-            <tr>
-                <th>اليوم</th>
-                <th>التاريخ</th>
-                <th>نوع الدوام</th>
-                <th>ملاحظات</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
 </div>
 
 <div class="status-bar" id="status-bar">تم الحفظ بنجاح</div>
@@ -154,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const printBtn = document.getElementById('print-btn');
     const clearBtn = document.getElementById('clear-btn');
     const calendar = document.getElementById('calendar');
-    const printTable = document.querySelector('#print-table tbody');
+    const printBody = document.getElementById('print-body');
     const printDateRange = document.getElementById('print-date-range');
     const statusBar = document.getElementById('status-bar');
 
@@ -164,8 +182,16 @@ document.addEventListener('DOMContentLoaded', function () {
         "1-5": "عيد العمل",
         "25-5": "عيد الاستقلال",
         "25-12": "عيد الميلاد المجيد",
-        // يمكن إضافة عطل أخرى حسب الدولة
     };
+    
+    // بيانات الملامسيات (يمكن تخصيصها حسب الحاجة)
+    const malamsiat = [
+        "محوم 5", "محوم 6", "محرم 7", "محرم 8", "محرم 9", "محرم 10", 
+        "محرم 11", "محرم 12", "محرم 13", "محرم 14", "محرم 15", "محرم 16", 
+        "محرم 17", "محرم 18", "محرم 19", "محرم 20", "محرم 21", "محرم 22", 
+        "محرم 23", "محرم 24", "محرم 25", "محرم 26", "محرم 27", "محرم 28", 
+        "محرم 29", "", "", "", "", "", ""
+    ];
     
     // تهيئة السنوات في القائمة المنسدلة
     const currentYear = new Date().getFullYear();
@@ -186,13 +212,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // إضافة مستمعي الأحداث
     generateBtn.addEventListener('click', generateSchedule);
     saveBtn.addEventListener('click', saveSchedule);
-    printBtn.addEventListener('click', () => window.print());
+    printBtn.addEventListener('click', preparePrint);
     clearBtn.addEventListener('click', clearSchedule);
     
     // دالة إنشاء الجدول
     function generateSchedule() {
         calendar.innerHTML = "";
-        printTable.innerHTML = "";
+        printBody.innerHTML = "";
         
         const year = parseInt(yearSelect.value);
         const month = parseInt(monthSelect.value);
@@ -316,39 +342,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             calendar.appendChild(cell);
-            
-            // ----- جدول الطباعة -----
-            const tr = document.createElement('tr');
-            
-            const tdDay = document.createElement('td');
-            tdDay.textContent = dayOfWeek;
-            tr.appendChild(tdDay);
-            
-            const tdDate = document.createElement('td');
-            tdDate.textContent = `${day}/${month + 1}/${year}`;
-            tr.appendChild(tdDate);
-            
-            const tdShift = document.createElement('td');
-            const shiftValue = localStorage.getItem(key) || "";
-            tdShift.innerHTML = shiftValue ? `<span class="print-shift">${shiftValue}</span>` : "";
-            tr.appendChild(tdShift);
-            
-            const tdNote = document.createElement('td');
-            let noteText = localStorage.getItem(key + "-note") || "";
-            
-            if(localStorage.getItem(key + "-leave")) {
-                noteText += noteText ? "، إجازة" : "إجازة";
-            }
-            
-            if(holidays[holidayKey]) {
-                noteText += noteText ? `، ${holidays[holidayKey]}` : holidays[holidayKey];
-            }
-            
-            tdNote.textContent = noteText;
-            tr.appendChild(tdNote);
-            
-            printTable.appendChild(tr);
         }
+        
+        // إنشاء جدول الطباعة
+        updatePrintTable();
     }
     
     // تطبيق لون نوع الدوام على الخلية
@@ -392,6 +389,80 @@ document.addEventListener('DOMContentLoaded', function () {
             generateSchedule();
             showStatus("تم مسح جميع البيانات");
         }
+    }
+    
+    // تحديث جدول الطباعة
+    function updatePrintTable() {
+        printBody.innerHTML = "";
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        
+        for(let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dayOfWeek = daysOfWeek[date.getDay()];
+            const key = `${year}-${month + 1}-${day}`;
+            
+            const tr = document.createElement('tr');
+            
+            // عمود الملامسيات
+            const tdMalamisia = document.createElement('td');
+            tdMalamisia.textContent = malamsiat[day-1] || "";
+            tr.appendChild(tdMalamisia);
+            
+            // عمود اليوم
+            const tdDay = document.createElement('td');
+            tdDay.textContent = dayOfWeek;
+            tr.appendChild(tdDay);
+            
+            // عمود التاريخ
+            const tdDate = document.createElement('td');
+            tdDate.textContent = `${day}/${month + 1}/${year}`;
+            tr.appendChild(tdDate);
+            
+            // عمود الدوام
+            const tdShift = document.createElement('td');
+            const shiftValue = localStorage.getItem(key) || "";
+            
+            // إضافة لون لنوع الدوام
+            if (shiftValue === "صباحي") {
+                tdShift.classList.add("print-morning");
+            } else if (shiftValue === "مسائي") {
+                tdShift.classList.add("print-evening");
+            } else if (shiftValue === "خفارة") {
+                tdShift.classList.add("print-guard");
+            } else if (shiftValue === "استراحة") {
+                tdShift.classList.add("print-rest");
+            }
+            
+            // التحقق من الإجازة
+            if(localStorage.getItem(key + "-leave")) {
+                tdShift.classList.add("print-leave");
+                tdShift.textContent = shiftValue ? `${shiftValue} (إجازة)` : "إجازة";
+            } else {
+                tdShift.textContent = shiftValue;
+            }
+            
+            // التحقق من العطلة
+            const holidayKey = `${day}-${month + 1}`;
+            if(holidays[holidayKey]) {
+                tdShift.classList.add("print-holiday");
+                tdShift.textContent = shiftValue ? `${shiftValue} (عطلة)` : "عطلة";
+            }
+            
+            tr.appendChild(tdShift);
+            
+            printBody.appendChild(tr);
+        }
+    }
+    
+    // تحضير الطباعة
+    function preparePrint() {
+        updatePrintTable();
+        setTimeout(() => {
+            window.print();
+        }, 100);
     }
     
     // حفظ تلقائي كل 30 ثانية
