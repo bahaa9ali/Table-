@@ -46,13 +46,11 @@ button.success:hover { background-color: #219653; }
 .note { font-size:12px; color:#555; margin-top:6px; padding: 4px; background: #f9f9f9; border-radius: 4px; min-height: 32px; }
 .btn-small { margin-top:5px; font-size:12px; padding:5px 8px; border-radius:5px; background:#95a5a6; color:white; cursor:pointer; border:none; }
 .btn-small:hover { opacity: 0.9; }
-.holiday { background-color: var(--عطلة) !important; }
 .leave { background-color: var(--اجازة) !important; }
 .status-bar { position: fixed; bottom: 20px; right: 20px; padding: 10px 15px; background: var(--success); color: white; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; }
 .status-bar.show { opacity: 1; }
 .actions { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
 .cell-actions { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
-.holiday-label { font-size: 11px; background: #e74c3c; color: white; padding: 2px 5px; border-radius: 3px; margin-top: 5px; display: inline-block; }
 
 @media (max-width:1200px){ .calendar { grid-template-columns: repeat(4,1fr); } }
 @media (max-width:768px){ 
@@ -66,35 +64,79 @@ button.success:hover { background-color: #219653; }
     select, button { width: 100%; justify-content: center; }
 }
 
-/* --- جدول الطباعة --- */
+/* --- تحسينات جدول الطباعة --- */
 .print-container { display: none; }
-.print-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 16px; border: 2px solid #000; }
-.print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: center; }
-.print-table th { background: #ddd; font-weight: 700; font-size: 18px; }
-.print-header { text-align: center; margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+.print-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; border: 1px solid #000; page-break-inside: avoid; }
+.print-table th, .print-table td { border: 1px solid #000; padding: 8px; text-align: center; }
+.print-table th { background: #eee; font-weight: 700; font-size: 16px; }
+.print-header { text-align: center; margin-bottom: 15px; padding: 10px; }
 .print-header h2 { margin: 0; font-size: 24px; color: #2c3e50; }
 .print-header p { margin: 5px 0; font-size: 18px; }
-.print-shift { font-weight: 600; padding: 5px 10px; border-radius: 4px; }
+.print-shift { font-weight: 600; padding: 4px 8px; border-radius: 4px; }
 
 /* ألوان جدول الطباعة */
 .print-morning { background-color: var(--صباحي); }
 .print-evening { background-color: var(--مسائي); }
 .print-guard { background-color: var(--خفارة); }
 .print-rest { background-color: var(--استراحة); }
-.print-holiday { background-color: var(--عطلة); }
 .print-leave { background-color: var(--اجازة); }
 
 @media print {
-    body { background: #fff; padding: 0; margin: 0; }
-    .container { box-shadow: none; padding: 0; margin: 0; max-width: 100%; }
-    .controls, .legend, .actions, #calendar, .header { display: none; }
-    .print-container { display: block; }
-    .print-table { width: 100%; }
+    body, html { 
+        background: #fff; 
+        padding: 0; 
+        margin: 0; 
+        width: 210mm; /* عرض A4 */
+        height: 297mm; /* ارتفاع A4 */
+    }
     
-    /* ضبط حجم الخط للطباعة */
-    .print-table th, .print-table td { font-size: 16px; }
-    .print-header h2 { font-size: 28px; }
-    .print-header p { font-size: 20px; }
+    .container { 
+        box-shadow: none; 
+        padding: 5mm; 
+        margin: 0; 
+        width: 100%; 
+        height: 100%;
+        max-width: 100%;
+    }
+    
+    .controls, .legend, .actions, #calendar, .header { 
+        display: none; 
+    }
+    
+    .print-container { 
+        display: block; 
+        width: 100%;
+        height: 100%;
+    }
+    
+    .print-table { 
+        width: 100%;
+        font-size: 12px;
+    }
+    
+    .print-table th, .print-table td { 
+        padding: 5px; 
+        font-size: 12px;
+    }
+    
+    .print-header h2 { 
+        font-size: 20px; 
+        margin-bottom: 5px;
+    }
+    
+    .print-header p { 
+        font-size: 16px; 
+        margin: 2px 0;
+    }
+    
+    /* منع تقسيم الجدول بين صفحات متعددة */
+    .print-table { page-break-inside: avoid; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    
+    @page {
+        size: A4;
+        margin: 0;
+    }
 }
 </style>
 </head>
@@ -133,9 +175,8 @@ button.success:hover { background-color: #219653; }
     <div class="legend">
         <div class="legend-item"><div class="legend-color" style="background:var(--خفارة)"></div> خفارة</div>
         <div class="legend-item"><div class="legend-color" style="background:var(--استراحة)"></div> استراحة</div>
-        <div class="legend-item"><div class="legend-color" style="background:var(--صباحي)"></div> صباحي</div>
+        <div class="legend-item"><div class="legend-color" style="background:var(--صباحi)"></div> صباحي</div>
         <div class="legend-item"><div class="legend-color" style="background:var(--مسائي)"></div> مسائي</div>
-        <div class="legend-item"><div class="legend-color" style="background:var(--عطلة)"></div> عطلة رسمية</div>
         <div class="legend-item"><div class="legend-color" style="background:var(--اجازة)"></div> إجازة</div>
     </div>
     
@@ -150,10 +191,10 @@ button.success:hover { background-color: #219653; }
         <table class="print-table">
             <thead>
                 <tr>
-                    <th>الملامسيات</th>
                     <th>اليوم</th>
                     <th>التاريخ</th>
-                    <th>الدوام</th>
+                    <th>نوع الدوام</th>
+                    <th>ملاحظات</th>
                 </tr>
             </thead>
             <tbody id="print-body"></tbody>
@@ -175,23 +216,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const printBody = document.getElementById('print-body');
     const printDateRange = document.getElementById('print-date-range');
     const statusBar = document.getElementById('status-bar');
-
-    // العطل الرسمية (يمكن إضافة المزيد حسب الحاجة)
-    const holidays = { 
-        "1-1": "رأس السنة الميلادية", 
-        "1-5": "عيد العمل",
-        "25-5": "عيد الاستقلال",
-        "25-12": "عيد الميلاد المجيد",
-    };
-    
-    // بيانات الملامسيات (يمكن تخصيصها حسب الحاجة)
-    const malamsiat = [
-        "محوم 5", "محوم 6", "محرم 7", "محرم 8", "محرم 9", "محرم 10", 
-        "محرم 11", "محرم 12", "محرم 13", "محرم 14", "محرم 15", "محرم 16", 
-        "محرم 17", "محرم 18", "محرم 19", "محرم 20", "محرم 21", "محرم 22", 
-        "محرم 23", "محرم 24", "محرم 25", "محرم 26", "محرم 27", "محرم 28", 
-        "محرم 29", "", "", "", "", "", ""
-    ];
     
     // تهيئة السنوات في القائمة المنسدلة
     const currentYear = new Date().getFullYear();
@@ -326,16 +350,6 @@ document.addEventListener('DOMContentLoaded', function () {
             
             cell.appendChild(actions);
             
-            // إضافة العطل الرسمية إن وجدت
-            const holidayKey = `${day}-${month + 1}`;
-            if(holidays[holidayKey]) {
-                cell.classList.add("holiday");
-                const holidayLabel = document.createElement('div');
-                holidayLabel.className = "holiday-label";
-                holidayLabel.textContent = `عطلة: ${holidays[holidayKey]}`;
-                cell.appendChild(holidayLabel);
-            }
-            
             // تطبيق الإجازة إذا كانت محفوظة
             if(localStorage.getItem(key + "-leave")) {
                 cell.classList.add("leave");
@@ -398,6 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const month = parseInt(monthSelect.value);
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const daysOfWeek = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
         
         for(let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
@@ -405,11 +420,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const key = `${year}-${month + 1}-${day}`;
             
             const tr = document.createElement('tr');
-            
-            // عمود الملامسيات
-            const tdMalamisia = document.createElement('td');
-            tdMalamisia.textContent = malamsiat[day-1] || "";
-            tr.appendChild(tdMalamisia);
             
             // عمود اليوم
             const tdDay = document.createElement('td');
@@ -444,14 +454,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 tdShift.textContent = shiftValue;
             }
             
-            // التحقق من العطلة
-            const holidayKey = `${day}-${month + 1}`;
-            if(holidays[holidayKey]) {
-                tdShift.classList.add("print-holiday");
-                tdShift.textContent = shiftValue ? `${shiftValue} (عطلة)` : "عطلة";
-            }
-            
             tr.appendChild(tdShift);
+            
+            // عمود الملاحظات
+            const tdNote = document.createElement('td');
+            const noteValue = localStorage.getItem(key + "-note") || "";
+            tdNote.textContent = noteValue;
+            tr.appendChild(tdNote);
             
             printBody.appendChild(tr);
         }
@@ -464,11 +473,6 @@ document.addEventListener('DOMContentLoaded', function () {
             window.print();
         }, 100);
     }
-    
-    // حفظ تلقائي كل 30 ثانية
-    setInterval(() => {
-        // يمكن إضافة منطق النسخ الاحتياطي هنا
-    }, 30000);
 });
 </script>
 </body>
