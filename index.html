@@ -52,8 +52,7 @@ button.success:hover { background-color: #219653; }
 .status-bar.show { opacity: 1; }
 .actions { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
 .cell-actions { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
-.match { background-color: var(--مباراة) !important; }
-.match-select { margin-top: 5px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; display: none; }
+.match-note { color: #d32f2f; font-weight: bold; }
 
 @media (max-width:1200px){ .calendar { grid-template-columns: repeat(4,1fr); } }
 @media (max-width:768px){ 
@@ -83,7 +82,6 @@ button.success:hover { background-color: #219653; }
 .print-guard { background-color: var(--خفارة); }
 .print-rest { background-color: var(--استراحة); }
 .print-leave { background-color: var(--اجازة); }
-.print-match { background-color: var(--مباراة); }
 
 @media print {
     body, html { 
@@ -182,7 +180,6 @@ button.success:hover { background-color: #219653; }
         <div class="legend-item"><div class="legend-color" style="background:var(--صباحي)"></div> صباحي</div>
         <div class="legend-item"><div class="legend-color" style="background:var(--مسائي)"></div> مسائي</div>
         <div class="legend-item"><div class="legend-color" style="background:var(--اجازة)"></div> إجازة</div>
-        <div class="legend-item"><div class="legend-color" style="background:var(--مباراة)"></div> مباراة</div>
     </div>
 
     <div id="calendar" class="calendar"></div>
@@ -222,16 +219,58 @@ document.addEventListener('DOMContentLoaded', function () {
     const printDateRange = document.getElementById('print-date-range');
     const statusBar = document.getElementById('status-bar');
 
-    // قائمة الأندية واختصاراتها
-    const footballClubs = [
-        {name: "مانشستر يونايتد", code: "MU"},
-        {name: "مانشستر سيتي", code: "MC"},
-        {name: "ليفربول", code: "LIV"},
-        {name: "أرسنال", code: "ARS"},
-        {name: "تشيلسي", code: "CHE"},
-        {name: "برشلونة", code: "BAR"},
-        {name: "ريال مدريد", code: "RM"}
-    ];
+    // جدول المباريات الافتراضي (يتم إنشاؤه عشوائياً لكل شهر)
+    const footballMatches = {
+        // مانشستر يونايتد
+        "MU": [
+            { day: 5, opponent: "MC", home: true }, 
+            { day: 12, opponent: "LIV", home: false },
+            { day: 19, opponent: "ARS", home: true },
+            { day: 26, opponent: "CHE", home: false }
+        ],
+        // مانشستر سيتي
+        "MC": [
+            { day: 5, opponent: "MU", home: false },
+            { day: 13, opponent: "RM", home: true },
+            { day: 20, opponent: "BAR", home: false },
+            { day: 27, opponent: "LIV", home: true }
+        ],
+        // ليفربول
+        "LIV": [
+            { day: 6, opponent: "ARS", home: true },
+            { day: 12, opponent: "MU", home: true },
+            { day: 19, opponent: "CHE", home: false },
+            { day: 27, opponent: "MC", home: false }
+        ],
+        // أرسنال
+        "ARS": [
+            { day: 6, opponent: "LIV", home: false },
+            { day: 14, opponent: "BAR", home: true },
+            { day: 19, opponent: "MU", home: false },
+            { day: 28, opponent: "RM", home: true }
+        ],
+        // تشيلسي
+        "CHE": [
+            { day: 7, opponent: "RM", home: true },
+            { day: 15, opponent: "BAR", home: false },
+            { day: 19, opponent: "LIV", home: true },
+            { day: 26, opponent: "MU", home: true }
+        ],
+        // برشلونة
+        "BAR": [
+            { day: 7, opponent: "CHE", home: false },
+            { day: 14, opponent: "ARS", home: false },
+            { day: 21, opponent: "RM", home: true },
+            { day: 28, opponent: "MC", home: true }
+        ],
+        // ريال مدريد
+        "RM": [
+            { day: 7, opponent: "CHE", home: false },
+            { day: 13, opponent: "MC", home: false },
+            { day: 21, opponent: "BAR", home: false },
+            { day: 28, opponent: "ARS", home: false }
+        ]
+    };
 
     // تهيئة السنوات في القائمة المنسدلة
     const currentYear = new Date().getFullYear();
@@ -327,27 +366,28 @@ document.addEventListener('DOMContentLoaded', function () {
             const note = document.createElement('div');
             note.className = "note";
             const savedNote = localStorage.getItem(key + "-note") || "";
-            note.textContent = savedNote;
+            
+            // التحقق من وجود مباراة في هذا اليوم
+            let matchText = "";
+            for (const team in footballMatches) {
+                const matches = footballMatches[team];
+                const match = matches.find(m => m.day === day);
+                if (match) {
+                    if (matchText) matchText += " | ";
+                    matchText += match.home ? 
+                        `${team} vs ${match.opponent} (د)` : 
+                        `${match.opponent} vs ${team} (خ)`;
+                }
+            }
+            
+            // دمج الملاحظات المحفوظة مع المباريات
+            if (matchText) {
+                note.innerHTML = `<div class="match-note">${matchText}</div>${savedNote}`;
+            } else {
+                note.textContent = savedNote;
+            }
+            
             cell.appendChild(note);
-
-            // قائمة اختيار المباريات (مخفية في البداية)
-            const matchSelect = document.createElement('select');
-            matchSelect.className = "match-select";
-            matchSelect.innerHTML = '<option value="">اختر المباراة</option>';
-            
-            // إضافة خيارات المباريات
-            footballClubs.forEach(homeClub => {
-                footballClubs.forEach(awayClub => {
-                    if (homeClub.code !== awayClub.code) {
-                        const option = document.createElement('option');
-                        option.value = `${homeClub.code} vs ${awayClub.code}`;
-                        option.textContent = `${homeClub.name} vs ${awayClub.name}`;
-                        matchSelect.appendChild(option);
-                    }
-                });
-            });
-            
-            cell.appendChild(matchSelect);
 
             // أزرار الإجراءات
             const actions = document.createElement('div');
@@ -376,50 +416,24 @@ document.addEventListener('DOMContentLoaded', function () {
             noteBtn.addEventListener('click', function() {
                 const newNote = prompt("اكتب الملاحظة:", savedNote);
                 if(newNote !== null) {
-                    note.textContent = newNote;
+                    // الحفاظ على نص المباراة عند تعديل الملاحظة
+                    let finalNote = newNote;
+                    if (matchText) {
+                        note.innerHTML = `<div class="match-note">${matchText}</div>${finalNote}`;
+                    } else {
+                        note.textContent = finalNote;
+                    }
                     localStorage.setItem(key + "-note", newNote);
                     showStatus("تم حفظ الملاحظة");
                 }
             });
             actions.appendChild(noteBtn);
-            
-            // زر المباراة
-            const matchBtn = document.createElement('button');
-            matchBtn.className = "btn-small";
-            matchBtn.innerHTML = '<i class="fas fa-futbol"></i> مباراة';
-            matchBtn.addEventListener('click', function() {
-                matchSelect.style.display = matchSelect.style.display === 'block' ? 'none' : 'block';
-            });
-            
-            matchSelect.addEventListener('change', function() {
-                if (this.value) {
-                    // إضافة المباراة إلى الملاحظات
-                    const currentNote = localStorage.getItem(key + "-note") || "";
-                    const newNote = currentNote ? `${currentNote} | ${this.value}` : this.value;
-                    note.textContent = newNote;
-                    localStorage.setItem(key + "-note", newNote);
-                    
-                    // تمييز الخلية كلون مباراة
-                    cell.classList.add("match");
-                    localStorage.setItem(key + "-match", "1");
-                    
-                    showStatus("تم إضافة المباراة");
-                    matchSelect.style.display = 'none';
-                }
-            });
-            
-            actions.appendChild(matchBtn);
 
             cell.appendChild(actions);
 
             // تطبيق الإجازة إذا كانت محفوظة
             if(localStorage.getItem(key + "-leave")) {
                 cell.classList.add("leave");
-            }
-            
-            // تطبيق المباراة إذا كانت محفوظة
-            if(localStorage.getItem(key + "-match")) {
-                cell.classList.add("match");
             }
 
             calendar.appendChild(cell);
@@ -465,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 localStorage.removeItem(key);
                 localStorage.removeItem(key + "-note");
                 localStorage.removeItem(key + "-leave");
-                localStorage.removeItem(key + "-match");
             }
 
             generateSchedule();
@@ -521,19 +534,33 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 tdShift.textContent = shiftValue;
             }
-            
-            // التحقق من المباراة
-            if(localStorage.getItem(key + "-match")) {
-                tdShift.classList.add("print-match");
-                tdShift.textContent = shiftValue ? `${shiftValue} (مباراة)` : "مباراة";
-            }
 
             tr.appendChild(tdShift);
 
             // عمود الملاحظات
             const tdNote = document.createElement('td');
             const noteValue = localStorage.getItem(key + "-note") || "";
-            tdNote.textContent = noteValue;
+            
+            // التحقق من وجود مباراة في هذا اليوم
+            let matchText = "";
+            for (const team in footballMatches) {
+                const matches = footballMatches[team];
+                const match = matches.find(m => m.day === day);
+                if (match) {
+                    if (matchText) matchText += " | ";
+                    matchText += match.home ? 
+                        `${team} vs ${match.opponent} (د)` : 
+                        `${match.opponent} vs ${team} (خ)`;
+                }
+            }
+            
+            // دمج الملاحظات المحفوظة مع المباريات
+            if (matchText) {
+                tdNote.innerHTML = `<strong>${matchText}</strong><br>${noteValue}`;
+            } else {
+                tdNote.textContent = noteValue;
+            }
+            
             tr.appendChild(tdNote);
 
             printBody.appendChild(tr);
